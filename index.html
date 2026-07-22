@@ -1,14 +1,35 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/HootaFPL/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>fpl-app</title>
-    <script type="module" crossorigin src="/HootaFPL/assets/index-DOnLNp_I.js"></script>
+    <!-- خط تجوال الأنيق والقابل للقراءة بوضوح -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    <!-- مكتبة FontAwesome للأيقونات المتفاعلة -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- استدعاء Tailwind CSS سريع للمساعدة في التجاوب -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'fpl-purple': '#37003c',
+              'fpl-green': '#00ff85',
+              'fpl-light': '#f8fafc',
+            },
+            fontFamily: {
+              'tajawal': ['Tajawal', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <title>منصة فانتسي الذكية</title>
+    <script type="module" crossorigin src="/HootaFPL/assets/index-Cz0OiGDG.js"></script>
     <link rel="stylesheet" crossorigin href="/HootaFPL/assets/index-nqMpL4T3.css">
   </head>
-  <body>
+  <body class="bg-gray-50 text-gray-800 font-tajawal antialiased">
     <div id="root"></div>
   </body>
 </html>
