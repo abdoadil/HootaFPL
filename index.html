@@ -1,13 +1,61 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>fpl-app</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- 1. روابط الخطوط والأيقونات الخاصة بك (أساسية للتصميم) -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- 2. إعدادات Tailwind الخاصة بك -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'fpl-purple': '#37003c',
+            'fpl-green': '#00ff85',
+            'fpl-light': '#f8fafc',
+          },
+          fontFamily: {
+            'tajawal': ['Tajawal', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- 3. تحسينات محركات البحث (SEO) والكلمات المفتاحية -->
+  <title>HootaFPL | منصة الفانتسي بريميرليج الشاملة</title>
+  <meta name="title" content="HootaFPL | منصة الفانتسي بريميرليج الشاملة" />
+  <meta name="description" content="HootaFPL منصة فانتسي بريميرليج المتقدمة لموسم 2026/2027. تحليل التشكيلات بالذكاء الاصطناعي، رادار الأسعار، حاسبة التبديلات السالب، ومؤشر صعوبة المباريات FDR." />
+  <meta name="keywords" content="فانتسي, FPL, فانتسي الدوري الإنجليزي, HootaFPL, تشكيلة الفانتسي, المساعد الذكي, رادار الأسعار, Fantasy Premier League 2026/2027" />
+  <meta name="author" content="Abdalmahmoud Adil Alnoor" />
+
+  <!-- ⚠️ 4. كود التوثيق من جوجل (Google Verification Tag) تضعه هنا لاحقاً ⚠️ -->
+  
+
+  <!-- 5. إعدادات مشاركة الرابط (لظهور الموقع بشكل جذاب في الواتساب وفيسبوك) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://abdoadil.github.io/HootaFPL/" />
+  <meta property="og:title" content="HootaFPL | منصة الفانتسي بريميرليج الشاملة" />
+  <meta property="og:description" content="حلّل تشكيلتك بالذكاء الاصطناعي، وتابع رادار الأسعار ومواعيد المباريات المباشرة لموسم الفانتسي 2026/2027." />
+  <meta property="og:image" content="https://abdoadil.github.io/HootaFPL/logo.png" />
+
+  <!-- 6. إعدادات مشاركة تويتر (Twitter Card) -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://abdoadil.github.io/HootaFPL/" />
+  <meta property="twitter:title" content="HootaFPL Super App" />
+  <meta property="twitter:description" content="أقوى منصة عربية لمساعدة مدربي الفانتسي بالذكاء الاصطناعي والإحصائيات الحية." />
+  <meta property="twitter:image" content="https://abdoadil.github.io/HootaFPL/logo.png" />
+
+  <!-- أيقونة الموقع -->
+  <link rel="icon" type="image/png" href="/logo.png" />
+</head>
+<body class="bg-gray-50 text-gray-800 font-tajawal antialiased">
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
 </html>

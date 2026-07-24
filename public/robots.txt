@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://abdoadil.github.io/HootaFPL/sitemap.xml
