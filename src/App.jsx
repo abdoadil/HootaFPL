@@ -59,6 +59,19 @@ function BackToTop({ show }) {
   );
 }
 
+// ============================================================
+// ❓ الأسئلة الشائعة (تُستخدم في شات بوت المساعدة السريع)
+// ============================================================
+const FAQ_ITEMS = [
+  { q: 'كيف أحصل على رقم فريقي (Team ID)؟', a: 'سجّل دخولك في موقع الفانتسي الرسمي، ثم افتح صفحة "Pick Team" أو "Points". رقمك موجود في رابط الصفحة بين entry/ و history/، انسخه من هناك.' },
+  { q: 'كيف تعمل الـ Wildcard؟', a: 'الـ Wildcard تسمح لك بتغيير تشكيلتك بالكامل دون خصم أي نقاط. تمتلك اثنتين في الموسم، واحدة في النصف الأول وواحدة في النصف الثاني.' },
+  { q: 'متى أستخدم Free Hit؟', a: 'استخدمها في جولة واحدة فقط بها ظروف استثنائية (بلانك جولة أو دبل جولة)، لأن تشكيلتك تعود تلقائياً كما كانت في الجولة التالية.' },
+  { q: 'كيف تُحسب نقاط الكابتن؟', a: 'يحصل الكابتن على ضعف نقاطه في تلك الجولة (x2)، وإذا فعّلت شريحة Triple Captain تصبح نقاطه x3.' },
+  { q: 'ما الفرق بين Bench Boost و Triple Captain؟', a: 'Bench Boost تُضيف نقاط لاعبي دكة البدلاء لإجمالي نقاطك في تلك الجولة، أما Triple Captain فتُضاعف نقاط الكابتن 3 مرات بدلاً من مرتين.' },
+  { q: 'كيف تتغير أسعار اللاعبين؟', a: 'تتغير الأسعار يومياً بناءً على حجم عمليات الشراء والبيع لكل لاعب مقارنة بباقي اللاعبين، ولا تتغير الأسعار إطلاقاً قبل انطلاق الجولة الأولى من الموسم.' },
+  { q: 'ما هو خصم الـ -4 (Hit)؟', a: 'كل تبديل إضافي بعد التبديل المجاني الأول يكلفك 4 نقاط تُخصم من رصيدك في تلك الجولة. استخدم حاسبة السالب في الموقع لمعرفة هل التبديل يستحق ذلك.' },
+];
+
 function App() {
   const [activeTab, setActiveTab] = useState('home');
   const WORKER_URL = 'https://fpl-proxy.sokar8893.workers.dev'; // ⚠️ تأكد من الرابط الخاص بك
@@ -134,6 +147,24 @@ function App() {
   const titleColors = ['text-white', 'text-fpl-green', 'text-yellow-400', 'text-blue-400', 'text-pink-400'];
   const [titleColorIndex, setTitleColorIndex] = useState(0);
 
+  // --- شرح جدول الأندية ---
+  const [showTableLegend, setShowTableLegend] = useState(false);
+
+  // --- فقاعات أخبار الكشافة (The Scout) ---
+  const [scoutBubbles, setScoutBubbles] = useState({ items: [], loading: true, activeItem: null });
+
+  // --- جدول المباريات الحي ---
+  const [fixturesFull, setFixturesFull] = useState({ loading: true, error: false, gw: null, gwStart: null, gwEnd: null, matches: [] });
+  const [fixturesGwOverride, setFixturesGwOverride] = useState(null);
+
+  // --- شات بوت الأسئلة الشائعة (يظهر تلقائياً) ---
+  const [faqOpen, setFaqOpen] = useState(false);
+  const [faqTeaser, setFaqTeaser] = useState(false);
+  const [faqMessages, setFaqMessages] = useState([{ role: 'assistant', text: 'أهلاً بك! 👋 أنا مساعدك السريع في HootaFPL، اختر سؤالاً جاهزاً أو اكتب سؤالك الخاص.' }]);
+  const [faqInput, setFaqInput] = useState('');
+  const [faqLoading, setFaqLoading] = useState(false);
+  const faqEndRef = useRef(null);
+
   const socialLinks = [
     { icon: 'fa-brands fa-instagram', url: 'https://www.instagram.com/abdo_adil/' },
     { icon: 'fa-brands fa-facebook', url: 'https://www.facebook.com/hoota2002/' },
@@ -148,11 +179,11 @@ function App() {
   ];
 
   const siteServices = [
-    { id: 'home', name: 'الرئيسية والأخبار', icon: 'fa-house' },
-    { id: 'pitch', name: 'المساعد الذكي للتشكيلة', icon: 'fa-robot' },
-    { id: 'radar', name: 'رادار تغير الأسعار', icon: 'fa-crosshairs' },
+    { id: 'home', name: 'الرئيسية', icon: 'fa-house' },
+    { id: 'pitch', name: 'المساعد الذكي', icon: 'fa-robot' },
+    { id: 'radar', name: 'رادار الأسعار', icon: 'fa-crosshairs' },
     { id: 'league', name: 'تحليل الدوريات الخاصة', icon: 'fa-trophy' },
-    { id: 'sim', name: 'محاكي التبديلات والخواص', icon: 'fa-laptop-code' },
+    { id: 'sim', name: 'محاكي التبديلات', icon: 'fa-laptop-code' },
     { id: 'hit', name: 'حاسبة سالب التبديلات', icon: 'fa-calculator' }
   ];
 
@@ -212,6 +243,95 @@ function App() {
   }, [homeData.deadline]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages, isChatLoading]);
+  useEffect(() => { faqEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [faqMessages, faqLoading]);
+
+  // إظهار فقاعة الشات بوت تلقائياً بعد ثوانٍ من الدخول (مرة واحدة في الجلسة)
+  useEffect(() => {
+    const shown = sessionStorage.getItem('hootafpl_faq_teased');
+    if (shown) return;
+    const t = setTimeout(() => { setFaqTeaser(true); sessionStorage.setItem('hootafpl_faq_teased', '1'); }, 6000);
+    return () => clearTimeout(t);
+  }, []);
+
+  // ============================================================
+  // 📰 أخبار الكشافة (The Scout) — تحديث كل 12 ساعة مع حفظ محلي
+  // ============================================================
+  const fetchScoutNews = async (force = false) => {
+    try {
+      const cacheRaw = localStorage.getItem('hootafpl_news_cache');
+      const cache = cacheRaw ? JSON.parse(cacheRaw) : null;
+      const twelveHours = 12 * 60 * 60 * 1000;
+      if (!force && cache && (Date.now() - cache.ts) < twelveHours && cache.items?.length) {
+        setScoutBubbles({ items: cache.items, loading: false, activeItem: null });
+        return;
+      }
+      setScoutBubbles(prev => ({ ...prev, loading: true }));
+      // ⚠️ يفترض وجود مسار /api/news في الـ Worker يقوم بجلب وتحليل أخبار The Scout من الموقع الرسمي
+      // وترتيبها حسب الأحدث أولاً. إن لم يتوفر المسار بعد، نستخدم نشرة احتياطية محلية.
+      let items = [];
+      try {
+        const res = await fetch(`${WORKER_URL}/api/news`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length) {
+            items = data.map((n, i) => ({
+              id: n.id || i, title: n.title, image: n.image || `${BASE_URL}logo.png`,
+              content: n.summary || n.content || '', date: n.date || new Date().toISOString(), link: n.link || null
+            })).sort((a, b) => new Date(b.date) - new Date(a.date));
+          }
+        }
+      } catch (err) { /* الـ Worker لا يدعم المسار بعد، سيتم استخدام النشرة الاحتياطية */ }
+
+      if (!items.length) {
+        items = scoutNewsList.map((n, i) => ({ id: i, title: n.title, image: `${BASE_URL}logo.png`, content: n.content, date: new Date(Date.now() - i * 3600000).toISOString(), tag: n.tag, bg: n.bg }));
+      }
+
+      localStorage.setItem('hootafpl_news_cache', JSON.stringify({ ts: Date.now(), items }));
+      setScoutBubbles({ items, loading: false, activeItem: null });
+    } catch (e) {
+      setScoutBubbles({ items: scoutNewsList.map((n, i) => ({ id: i, title: n.title, image: `${BASE_URL}logo.png`, content: n.content, date: new Date().toISOString() })), loading: false, activeItem: null });
+    }
+  };
+
+  useEffect(() => {
+    fetchScoutNews();
+    const newsInterval = setInterval(() => fetchScoutNews(true), 12 * 60 * 60 * 1000);
+    return () => clearInterval(newsInterval);
+  }, []);
+
+  // ============================================================
+  // 📅 جدول المباريات الحي — يتحدّث تلقائياً وينتقل للجولة التالية بمفرده
+  // ============================================================
+  const fetchFixturesFull = async (gwOverride = null) => {
+    setFixturesFull(prev => ({ ...prev, loading: prev.matches.length === 0, error: false }));
+    try {
+      const boot = await fetch(`${WORKER_URL}/api/bootstrap`).then(r => r.json());
+      const fixRes = await fetch(`${WORKER_URL}/api/fixtures`).then(r => r.json());
+      const events = boot.events || [];
+      const currentEvent = events.find(e => e.is_current) || events.find(e => e.is_next) || events[0];
+      const targetGw = gwOverride || currentEvent.id;
+      const gwFixtures = (Array.isArray(fixRes) ? fixRes : []).filter(f => f.event === targetGw).sort((a, b) => new Date(a.kickoff_time) - new Date(b.kickoff_time));
+      const kickoffs = gwFixtures.map(f => f.kickoff_time && new Date(f.kickoff_time)).filter(Boolean);
+      const gwStart = kickoffs.length ? new Date(Math.min(...kickoffs)) : null;
+      const gwEnd = kickoffs.length ? new Date(Math.max(...kickoffs)) : null;
+      const matches = gwFixtures.map(f => ({
+        id: f.id,
+        home: boot.teams.find(t => t.id === f.team_h),
+        away: boot.teams.find(t => t.id === f.team_a),
+        kickoff: f.kickoff_time,
+        started: f.started, finished: f.finished, finishedProvisional: f.finished_provisional,
+        homeScore: f.team_h_score, awayScore: f.team_a_score, minutes: f.minutes
+      }));
+      setFixturesFull({ loading: false, error: false, gw: targetGw, gwStart, gwEnd, matches, totalGws: events.length, isAuto: !gwOverride });
+    } catch (e) { setFixturesFull(prev => ({ ...prev, loading: false, error: true })); }
+  };
+
+  useEffect(() => {
+    if (activeTab !== 'fixtures') return;
+    fetchFixturesFull(fixturesGwOverride);
+    const interval = setInterval(() => fetchFixturesFull(fixturesGwOverride), 45000);
+    return () => clearInterval(interval);
+  }, [activeTab, fixturesGwOverride]);
 
   const [aiLoadingText, setAiLoadingText] = useState('');
   useEffect(() => {
@@ -361,6 +481,31 @@ function App() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
   };
 
+  const askFaq = (item) => {
+    setFaqMessages(prev => [...prev, { role: 'user', text: item.q }, { role: 'assistant', text: item.a }]);
+  };
+
+  const sendFaqFreeText = async () => {
+    if (!faqInput.trim()) return;
+    const userMsg = faqInput; const newMsgs = [...faqMessages, { role: 'user', text: userMsg }];
+    setFaqMessages(newMsgs); setFaqInput(''); setFaqLoading(true);
+    const prompt = `أنت مساعد سريع لموقع HootaFPL لموسم 2026/2027. أجب بإيجاز ووضوح (3-4 أسطر كحد أقصى) وبالعربية على سؤال المستخدم التالي المتعلق بالفانتسي: "${userMsg}"`;
+    try {
+      const ai = await fetch(`${WORKER_URL}/api/analyze`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) }).then(r => r.json());
+      setFaqMessages([...newMsgs, { role: 'assistant', text: ai.ai_text || 'عذراً، لم أستطع الإجابة الآن، جرّب أحد الأسئلة الجاهزة.' }]);
+    } catch (e) { setFaqMessages([...newMsgs, { role: 'assistant', text: 'عذراً، هناك ضغط على السيرفر حالياً. جرّب أحد الأسئلة الجاهزة بالأسفل 👇' }]); }
+    setFaqLoading(false);
+  };
+
+  const fmtMatchTime = (iso) => {
+    if (!iso) return { day: 'TBC', time: '--:--' };
+    const d = new Date(iso);
+    return {
+      day: d.toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'short' }),
+      time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
   const fetchRadar = async () => {
     setRadarData({ fallers: [], risers: [], loading: true });
     try {
@@ -483,6 +628,53 @@ function App() {
       <ToastContainer toasts={toasts} dismiss={dismiss} />
       <BackToTop show={scrolled} />
 
+      {/* 🤖 شات بوت الأسئلة الشائعة السريع */}
+      <div className="fixed bottom-6 left-6 z-[95] flex flex-col items-start gap-3">
+        {faqTeaser && !faqOpen && (
+          <div className="bg-white rounded-2xl rounded-bl-sm shadow-2xl border border-gray-100 p-4 max-w-[220px] animate-fade-in relative">
+            <button onClick={() => setFaqTeaser(false)} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center text-xs hover:bg-gray-300"><i className="fa-solid fa-xmark"></i></button>
+            <p className="text-sm font-bold text-gray-700">👋 عندك سؤال عن الفانتسي؟ أنا هنا لمساعدتك بسرعة!</p>
+            <button onClick={() => { setFaqOpen(true); setFaqTeaser(false); }} className="mt-2 text-fpl-purple text-sm font-black underline underline-offset-2">اسأل الآن</button>
+          </div>
+        )}
+
+        {faqOpen && (
+          <div className="bg-white w-[92vw] max-w-sm h-[500px] rounded-3xl shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-toast-in">
+            <div className="bg-fpl-purple text-white p-4 flex items-center justify-between shadow-md flex-none">
+              <span className="font-black text-lg flex items-center gap-2"><i className="fa-solid fa-headset text-fpl-green"></i> مساعدة سريعة</span>
+              <button onClick={() => setFaqOpen(false)} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"><i className="fa-solid fa-xmark"></i></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-gray-50">
+              {faqMessages.map((m, i) => (
+                <div key={i} className={`flex ${m.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[85%] p-3 rounded-2xl text-sm font-medium leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-white border border-gray-200 text-gray-800 rounded-tl-none' : 'bg-fpl-purple text-white rounded-tr-none'}`}>{m.text}</div>
+                </div>
+              ))}
+              {faqLoading && <div className="flex justify-end"><div className="bg-fpl-purple text-white p-3 rounded-2xl rounded-tr-none"><span className="loader border-white w-4 h-4"></span></div></div>}
+              <div ref={faqEndRef}></div>
+            </div>
+            <div className="p-3 bg-white border-t border-gray-100 flex-none">
+              <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar mb-2">
+                {FAQ_ITEMS.map((item, i) => (
+                  <button key={i} onClick={() => askFaq(item)} className="flex-none text-xs font-bold bg-fpl-green/10 text-fpl-purple border border-fpl-green/30 px-3 py-1.5 rounded-full hover:bg-fpl-green/20 transition-colors whitespace-nowrap">{item.q}</button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input type="text" placeholder="اكتب سؤالك..." className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-fpl-purple outline-none text-sm font-bold transition-colors" value={faqInput} onChange={e => setFaqInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendFaqFreeText()} />
+                <button onClick={sendFaqFreeText} disabled={faqLoading || !faqInput.trim()} className="bg-fpl-green text-fpl-purple w-10 h-10 rounded-xl flex items-center justify-center shadow-md hover:bg-green-400 active:scale-90 transition-all disabled:opacity-50 flex-none"><i className="fa-solid fa-paper-plane"></i></button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!faqOpen && (
+          <button onClick={() => { setFaqOpen(true); setFaqTeaser(false); }} className="w-16 h-16 rounded-full bg-fpl-purple text-fpl-green shadow-2xl flex items-center justify-center text-2xl hover:scale-110 hover:bg-purple-900 active:scale-95 transition-all duration-300 border-2 border-fpl-green/40 relative">
+            <i className="fa-solid fa-comment-dots"></i>
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-ping"></span>
+          </button>
+        )}
+      </div>
+
       <header className={`bg-fpl-purple shadow-2xl w-full text-center relative z-40 transition-all duration-700 ease-in-out ${activeTab === 'home' ? 'pt-28 pb-12 md:pt-32 md:pb-16' : 'py-6 md:py-8'}`}>
 
         <div className="absolute top-4 left-0 right-0 px-4 md:px-8 flex flex-col md:flex-row justify-between items-center z-50 pointer-events-none gap-4">
@@ -519,7 +711,7 @@ function App() {
 
         <h1 onClick={() => setTitleColorIndex((prev) => (prev + 1) % titleColors.length)} className={`font-black ${titleColors[titleColorIndex]} flex items-center justify-center gap-3 md:gap-4 transition-all duration-700 ease-in-out cursor-pointer select-none hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] ${activeTab === 'home' ? 'text-3xl sm:text-4xl md:text-6xl flex-col md:flex-row mt-24 md:mt-0' : 'text-2xl sm:text-3xl md:text-4xl mt-24 md:mt-0'}`} title="اضغط لتغيير اللون!">
            <img src={`${BASE_URL}logo.png`} alt="Logo" className={`rounded-full shadow-2xl border-4 border-fpl-green object-cover hover:rotate-12 transition-all duration-700 ease-in-out ${activeTab === 'home' ? 'w-20 h-20 md:w-32 md:h-32' : 'w-12 h-12 md:w-16 md:h-16'}`} />
-           <span className="leading-tight">HootaFPL<br className="md:hidden"/> Super App</span>
+           <span className="leading-tight">HootaFPL<br className="md:hidden"/></span>
         </h1>
 
         <div className={`transition-all duration-700 ease-in-out overflow-hidden ${activeTab === 'home' ? 'max-h-[500px] opacity-100 mt-6' : 'max-h-0 opacity-0 mt-0'}`}>
@@ -683,7 +875,7 @@ function App() {
                     <div className="bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden">
                        <div className="flex justify-between items-center mb-8 relative z-10 flex-wrap gap-4">
                           <h3 className="text-2xl md:text-3xl font-black text-fpl-purple flex items-center gap-3">
-                            <i className="fa-solid fa-star text-yellow-400 animate-pulse"></i> أبطال الجولات (Player of the Week)
+                            <i className="fa-solid fa-star text-yellow-400 animate-pulse"></i> نجوم للمراقبة (Top Players)
                           </h3>
                           {homeData.kingsOfGw.length > 0 && (
                               <div className="flex gap-2">
@@ -718,7 +910,7 @@ function App() {
 
                     <div className="bg-white border border-gray-200 rounded-3xl p-6 md:p-8 shadow-xl">
                        <h3 className="text-3xl font-black text-fpl-purple mb-6 flex items-center justify-between border-b-2 border-gray-100 pb-4 flex-wrap gap-4">
-                          <span className="flex items-center gap-3"><i className="fa-solid fa-trophy text-yellow-500 text-3xl"></i> أندية الدوري الإنجليزي 2026/2027</span>
+                          <span className="flex items-center gap-3"><i className="fa-solid fa-trophy text-yellow-500 text-3xl"></i> جدول ترتيب أندية الدوري الإنجليزي 2026/2027</span>
                        </h3>
                        <div className="overflow-x-auto custom-scrollbar pb-4">
                           <table className="w-full text-center min-w-[750px] mb-6">
@@ -738,7 +930,80 @@ function App() {
                              </tbody>
                           </table>
                        </div>
+
+                       {/* ℹ️ شرح تفاعلي لأعمدة الجدول */}
+                       <div className="text-center">
+                          <button onClick={() => setShowTableLegend(!showTableLegend)} className="inline-flex items-center gap-2 text-fpl-purple font-black bg-purple-50 hover:bg-purple-100 px-5 py-2.5 rounded-full transition-all duration-300 active:scale-95">
+                             <i className={`fa-solid fa-circle-info transition-transform duration-300 ${showTableLegend ? 'rotate-180 text-fpl-green' : ''}`}></i>
+                             {showTableLegend ? 'إخفاء شرح الجدول' : 'اضغط لمعرفة ماذا تعني أعمدة الجدول'}
+                          </button>
+                          {showTableLegend && (
+                             <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3 animate-fade-in text-right">
+                                {[
+                                  { k: 'لعب', v: 'عدد المباريات التي خاضها النادي حتى الآن في الدوري.' },
+                                  { k: 'فاز / تعادل / خسر', v: 'نتائج النادي التراكمية في كل مباراة لعبها.' },
+                                  { k: 'الفارق (+/-)', v: 'الفرق بين الأهداف التي سجّلها الفريق والأهداف التي استقبلها.' },
+                                  { k: 'النقاط', v: 'الفوز = 3 نقاط، التعادل = نقطة واحدة، الخسارة = صفر.' },
+                                ].map((item, i) => (
+                                  <div key={i} className="bg-gray-50 border border-gray-100 rounded-2xl p-4 hover:border-fpl-green hover:shadow-md transition-all duration-300">
+                                     <div className="font-black text-fpl-purple mb-1">{item.k}</div>
+                                     <div className="text-sm text-gray-500 font-bold leading-relaxed">{item.v}</div>
+                                  </div>
+                                ))}
+                             </div>
+                          )}
+                       </div>
                     </div>
+
+                    {/* 🗞️ فقاعات أخبار الكشافة (The Scout) — تُحدَّث كل 12 ساعة */}
+                    <div className="bg-gradient-to-br from-purple-50 via-white to-green-50 border border-purple-100 rounded-3xl p-6 md:p-8 shadow-xl">
+                       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                          <h3 className="text-2xl md:text-3xl font-black text-fpl-purple flex items-center gap-3">
+                             <i className="fa-solid fa-newspaper text-fpl-green"></i> أخبار الكشافة (The Scout)
+                          </h3>
+                          <span className="text-xs md:text-sm font-bold text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-100 shadow-sm"><i className="fa-solid fa-clock-rotate-left mr-1"></i> تحديث تلقائي كل 12 ساعة</span>
+                       </div>
+
+                       {scoutBubbles.loading ? (
+                          <div className="flex gap-4 overflow-x-auto pb-2">{[0,1,2].map(i => <SkeletonBox key={i} className="w-64 h-40 flex-none" />)}</div>
+                       ) : (
+                          <div className="flex gap-5 overflow-x-auto pb-3 custom-scrollbar snap-x snap-mandatory">
+                             {scoutBubbles.items.map((item) => (
+                                <button key={item.id} onClick={() => setScoutBubbles(prev => ({ ...prev, activeItem: item }))}
+                                   className="group flex-none w-64 md:w-72 bg-white rounded-3xl border border-gray-100 shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 overflow-hidden text-right snap-start">
+                                   <div className="h-32 w-full overflow-hidden relative">
+                                      <img src={item.image} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onError={(e) => { e.target.onerror = null; e.target.src = `${BASE_URL}logo.png`; }} />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                                      <span className="absolute bottom-2 right-3 text-white text-xs font-bold">{new Date(item.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</span>
+                                   </div>
+                                   <div className="p-4">
+                                      <div className="font-black text-gray-800 text-md leading-snug line-clamp-2 group-hover:text-fpl-purple transition-colors">{item.title}</div>
+                                      <div className="mt-2 text-fpl-purple text-xs font-bold flex items-center gap-1"><i className="fa-solid fa-circle-info"></i> اضغط للتفاصيل</div>
+                                   </div>
+                                </button>
+                             ))}
+                          </div>
+                       )}
+                    </div>
+
+                    {/* نافذة تفاصيل الخبر — تظهر فوق الصفحة دون الانتقال لأي مكان */}
+                    {scoutBubbles.activeItem && (
+                       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] flex items-center justify-center p-4 animate-fade-in" onClick={() => setScoutBubbles(prev => ({ ...prev, activeItem: null }))}>
+                          <div className="bg-white rounded-3xl max-w-xl w-full max-h-[85vh] overflow-y-auto shadow-2xl animate-toast-in custom-scrollbar" onClick={e => e.stopPropagation()}>
+                             <div className="relative h-52 w-full">
+                                <img src={scoutBubbles.activeItem.image} alt="" className="w-full h-full object-cover" onError={(e) => { e.target.onerror = null; e.target.src = `${BASE_URL}logo.png`; }} />
+                                <button onClick={() => setScoutBubbles(prev => ({ ...prev, activeItem: null }))} className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors"><i className="fa-solid fa-xmark"></i></button>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
+                                <div className="absolute bottom-4 right-5 left-5 text-white font-black text-xl md:text-2xl leading-snug">{scoutBubbles.activeItem.title}</div>
+                             </div>
+                             <div className="p-6 md:p-8 text-right">
+                                <div className="text-xs font-bold text-gray-400 mb-4"><i className="fa-solid fa-calendar mr-1"></i> {new Date(scoutBubbles.activeItem.date).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
+                                <p className="text-lg text-gray-700 leading-loose font-medium whitespace-pre-line">{scoutBubbles.activeItem.content}</p>
+                                {scoutBubbles.activeItem.link && <a href={scoutBubbles.activeItem.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 mt-6 text-fpl-purple font-black hover:underline">المصدر الرسمي <i className="fa-solid fa-arrow-up-left-from-square"></i></a>}
+                             </div>
+                          </div>
+                       </div>
+                    )}
                  </div>
               )}
             </div>
@@ -887,6 +1152,80 @@ function App() {
             </div>
           )}
 
+          {/* 4. جدول المباريات الحي */}
+          {activeTab === 'fixtures' && (
+            <div className="animate-fade-in w-full">
+              <h2 className="text-3xl font-bold text-fpl-purple mb-2 text-center hover:scale-105 transition-transform duration-300">جدول مباريات الجولة 📅</h2>
+              <p className="text-center text-gray-400 font-bold mb-8 text-sm md:text-base"><i className="fa-solid fa-tower-broadcast text-red-500 animate-pulse mr-1"></i> يتحدّث تلقائياً كل 45 ثانية، وينتقل للجولة القادمة بمفرده فور انتهاء الجولة الحالية</p>
+
+              {fixturesFull.loading && !fixturesFull.matches.length ? (
+                <div className="space-y-4 max-w-3xl mx-auto">{[...Array(5)].map((_, i) => <SkeletonBox key={i} className="h-20" />)}</div>
+              ) : fixturesFull.error && !fixturesFull.matches.length ? (
+                <div className="text-center py-20 text-red-500 font-bold text-xl">
+                  <i className="fa-solid fa-triangle-exclamation text-4xl mb-3 block"></i> تعذر جلب جدول المباريات حالياً.
+                  <button onClick={() => fetchFixturesFull(fixturesGwOverride)} className="block mx-auto mt-5 bg-fpl-purple text-white px-6 py-2.5 rounded-xl hover:bg-purple-900 transition-all"><i className="fa-solid fa-rotate-right mr-2"></i> إعادة المحاولة</button>
+                </div>
+              ) : (
+                <div className="max-w-3xl mx-auto">
+                  {/* رأس الجولة مع التنقل */}
+                  <div className="bg-gradient-to-r from-fpl-purple via-purple-900 to-fpl-purple text-white rounded-3xl p-6 md:p-8 shadow-xl mb-8 flex items-center justify-between gap-4">
+                    <button onClick={() => setFixturesGwOverride(prev => (prev || fixturesFull.gw) - 1)} className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all active:scale-90 flex-none"><i className="fa-solid fa-chevron-right"></i></button>
+                    <div className="text-center">
+                      <div className="text-fpl-green font-black text-2xl md:text-3xl flex items-center justify-center gap-2">
+                        الجولة {fixturesFull.gw}
+                        {fixturesFull.isAuto && <span className="text-[10px] bg-fpl-green text-fpl-purple px-2 py-0.5 rounded-full font-black">مباشر تلقائي</span>}
+                      </div>
+                      {fixturesFull.gwStart && fixturesFull.gwEnd && (
+                        <div className="text-gray-300 text-xs md:text-sm font-bold mt-1">
+                          {fixturesFull.gwStart.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })} ← {fixturesFull.gwEnd.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+                        </div>
+                      )}
+                      {!fixturesFull.isAuto && (
+                        <button onClick={() => setFixturesGwOverride(null)} className="text-[11px] text-fpl-green underline underline-offset-2 mt-1.5 font-bold">العودة للجولة الحالية</button>
+                      )}
+                    </div>
+                    <button onClick={() => setFixturesGwOverride(prev => (prev || fixturesFull.gw) + 1)} className="w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all active:scale-90 flex-none"><i className="fa-solid fa-chevron-left"></i></button>
+                  </div>
+
+                  {/* قائمة المباريات */}
+                  <div className="space-y-4">
+                    {fixturesFull.matches.length === 0 ? (
+                      <div className="text-center text-gray-400 font-bold py-16"><i className="fa-solid fa-calendar-xmark text-4xl mb-3 block"></i> لا توجد مباريات مجدولة لهذه الجولة بعد</div>
+                    ) : fixturesFull.matches.map(m => {
+                      const { day, time } = fmtMatchTime(m.kickoff);
+                      const isLive = m.started && !m.finished;
+                      return (
+                        <div key={m.id} className={`bg-white rounded-2xl border-2 p-5 shadow-md hover:shadow-xl transition-all duration-300 ${isLive ? 'border-red-400 shadow-red-100' : 'border-gray-100 hover:border-fpl-purple/30'}`}>
+                          <div className="text-center text-xs font-bold text-gray-400 mb-3">{day}</div>
+                          <div className="grid grid-cols-3 items-center gap-2">
+                            <div className="flex items-center justify-end gap-3">
+                              <span className="font-black text-gray-800 text-sm md:text-lg truncate">{m.home?.name}</span>
+                              {m.home?.code && <img src={`https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${m.home.code}-66.webp`} className="w-8 h-10 md:w-10 md:h-12 drop-shadow-sm flex-none" alt="" />}
+                            </div>
+                            <div className="flex flex-col items-center justify-center">
+                              {m.started ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl md:text-3xl font-black text-fpl-purple">{m.homeScore ?? 0} - {m.awayScore ?? 0}</span>
+                                </div>
+                              ) : (
+                                <span className="text-lg md:text-xl font-black text-gray-700 bg-gray-50 px-4 py-1.5 rounded-xl border border-gray-100">{time}</span>
+                              )}
+                              {isLive && <span className="mt-1 text-[10px] md:text-xs font-black text-red-500 flex items-center gap-1 animate-pulse"><span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span> مباشر · {m.minutes}'</span>}
+                              {m.finished && <span className="mt-1 text-[10px] md:text-xs font-black text-gray-400">انتهت المباراة</span>}
+                            </div>
+                            <div className="flex items-center justify-start gap-3">
+                              {m.away?.code && <img src={`https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${m.away.code}-66.webp`} className="w-8 h-10 md:w-10 md:h-12 drop-shadow-sm flex-none" alt="" />}
+                              <span className="font-black text-gray-800 text-sm md:text-lg truncate">{m.away?.name}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* 5. الدوريات */}
           {activeTab === 'league' && (
@@ -1013,7 +1352,7 @@ function App() {
           {/* 7. حاسبة السالب */}
           {activeTab === 'hit' && (
              <div className="animate-fade-in max-w-4xl mx-auto">
-               <h2 className="text-3xl font-bold text-fpl-purple mb-4 text-center hover:scale-105 transition-transform duration-300">حاسبة جدوى التبديلات (-4) 🧮</h2>
+               <h2 className="text-3xl font-bold text-fpl-purple mb-4 text-center hover:scale-105 transition-transform duration-300">حاسبة جدوى التبديلات (-4)</h2>
                <p className="text-xl text-gray-500 text-center mb-10">أدخل توقعاتك لترى هل التبديل الإضافي يستحق خصم النقاط أم لا.</p>
                <div className="bg-gray-50 p-10 rounded-3xl border border-gray-200 shadow-xl hover:shadow-2xl transition-shadow duration-500">
                   <div className="grid sm:grid-cols-2 gap-10 mb-10">
@@ -1045,7 +1384,7 @@ function App() {
               <h2 className="text-4xl md:text-5xl font-black text-fpl-purple mb-8 flex items-center justify-center gap-4"><i className="fa-solid fa-circle-info text-fpl-green"></i> من نحن؟</h2>
               <div className="bg-white p-8 md:p-12 rounded-3xl border border-gray-100 shadow-xl text-right space-y-6">
                 <div className="flex justify-center mb-6"><img src={`${BASE_URL}logo.png`} alt="Logo" className="w-32 h-32 object-contain bg-fpl-purple p-2 rounded-full shadow-lg" /></div>
-                <p className="text-xl leading-loose font-medium text-gray-700"><span className="text-2xl font-black text-fpl-purple">HootaFPL Super App</span> هو منصتك العربية الشاملة والمصممة خصيصاً لعشاق لعبة الفانتسي بريميرليج (FPL). تم بناء هذا الموقع بشغف لتقديم أدوات متقدمة تفوق الخيال لموسم 2026/2027 تجمع بين دقة الإحصائيات وسحر الذكاء الاصطناعي.</p>
+                <p className="text-xl leading-loose font-medium text-gray-700"><span className="text-2xl font-black text-fpl-purple">HootaFPL</span> هو منصتك العربية الشاملة والمصممة خصيصاً لعشاق لعبة الفانتسي بريميرليج (FPL). تم بناء هذا الموقع بشغف لتقديم أدوات متقدمة تفوق الخيال لموسم 2026/2027 تجمع بين دقة الإحصائيات وسحر الذكاء الاصطناعي.</p>
                 <h3 className="text-2xl font-black text-fpl-purple mt-8 border-r-4 border-fpl-green pr-3">المطور</h3>
                 <p className="text-xl leading-loose font-medium text-gray-700">تم تطوير هذا المشروع بالكامل بواسطة المهندس والمطور <span className="font-black text-fpl-purple">Abdalmahmoud Adil Alnoor</span>.</p>
               </div>
@@ -1063,30 +1402,7 @@ function App() {
             </div>
           )}
 
-          {/* 10. صفحة تواصل معنا */}
-          {activeTab === 'contact' && (
-            <div className="animate-fade-in w-full max-w-4xl mx-auto text-center">
-              <h2 className="text-4xl md:text-5xl font-black text-fpl-purple mb-8 flex items-center justify-center gap-4"><i className="fa-solid fa-envelope-open-text text-fpl-green"></i> تواصل معنا</h2>
-              <div className="grid md:grid-cols-2 gap-8 text-right">
-                <div className="bg-gradient-to-br from-fpl-purple to-purple-900 text-white p-8 md:p-10 rounded-3xl shadow-xl">
-                  <h3 className="text-3xl font-black mb-6 border-b-2 border-white/20 pb-4">معلومات المطور</h3>
-                  <div className="flex flex-col gap-6">
-                    <div className="flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-fpl-green text-xl"><i className="fa-solid fa-user-tie"></i></div><div><div className="text-gray-300 text-sm font-bold">الاسم</div><div className="text-xl font-black">Abdalmahmoud Adil Alnoor</div></div></div>
-                    <div className="flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-fpl-green text-xl"><i className="fa-solid fa-envelope"></i></div><div><div className="text-gray-300 text-sm font-bold">البريد الإلكتروني</div><div className="text-lg font-black break-all">abdoadil859@gmail.com</div></div></div>
-                  </div>
-                </div>
-                <div className="bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-xl">
-                  <h3 className="text-3xl font-black text-fpl-purple mb-6">أرسل رسالة مباشرة</h3>
-                  <form action="mailto:abdoadil859@gmail.com" method="GET" encType="text/plain" className="flex flex-col gap-5">
-                    <div><label className="block text-gray-700 font-bold mb-2">اسمك الكريم:</label><input type="text" name="subject" placeholder="مثال: أحمد محمد" className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-fpl-purple font-medium" required /></div>
-                    <div><label className="block text-gray-700 font-bold mb-2">رسالتك:</label><textarea name="body" rows="5" placeholder="اكتب اقتراحك، استفسارك، أو مشكلتك هنا..." className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-fpl-purple font-medium resize-none" required></textarea></div>
-                    <button type="submit" className="bg-fpl-green text-fpl-purple font-black text-xl py-4 rounded-xl hover:bg-green-400 active:scale-95 transition-all shadow-md mt-2 flex items-center justify-center gap-3"><i className="fa-solid fa-paper-plane"></i> إرسال عبر البريد</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          )}
-
+          
         </div>
       </main>
 
@@ -1094,11 +1410,10 @@ function App() {
         <div className="flex flex-wrap justify-center gap-6 md:gap-12 mb-8 border-b border-gray-100 pb-8">
            <button onClick={() => { setActiveTab('about'); window.scrollTo(0,0); }} className="text-gray-600 hover:text-fpl-purple font-black text-lg transition-colors flex items-center gap-2"><i className="fa-solid fa-circle-info"></i> من نحن</button>
            <button onClick={() => { setActiveTab('privacy'); window.scrollTo(0,0); }} className="text-gray-600 hover:text-fpl-purple font-black text-lg transition-colors flex items-center gap-2"><i className="fa-solid fa-shield-halved"></i> سياسة الخصوصية</button>
-           <button onClick={() => { setActiveTab('contact'); window.scrollTo(0,0); }} className="text-gray-600 hover:text-fpl-purple font-black text-lg transition-colors flex items-center gap-2"><i className="fa-solid fa-envelope"></i> تواصل معنا</button>
-        </div>
-        <p className="text-gray-500 font-bold text-lg mb-3">© {new Date().getFullYear()} HootaFPL Super App. All rights reserved.</p>
+                   </div>
+        <p className="text-gray-500 font-bold text-lg mb-3">© {new Date().getFullYear()} HootaFPL. All rights reserved</p>
         <p dir="ltr" className="text-gray-600 text-lg font-bold flex items-center justify-center gap-1 flex-wrap">
-          developed with <i className="fa-solid fa-heart text-red-500 mx-1 animate-pulse hover:scale-125 transition-transform cursor-pointer"></i> by
+          Developed with <i className="fa-solid fa-heart text-red-500 mx-1 animate-pulse hover:scale-125 transition-transform cursor-pointer"></i> by
           <a href="https://abdoadil.github.io/" target="_blank" rel="noreferrer" className="text-gray-800 hover:text-fpl-purple transition-colors duration-300 hover:underline underline-offset-4 ml-1">Abdalmahmoud Adil Alnoor</a>
         </p>
         <div className="flex justify-center gap-5 mt-6">
