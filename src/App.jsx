@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-// ============================================================
+
 // 🔔 Toast Notification System (replaces window.alert everywhere)
-// ============================================================
+
+// 🔔 Toast Notification System (replaces window.alert everywhere)  
+
 let toastId = 0;
 function useToasts() {
   const [toasts, setToasts] = useState([]);
