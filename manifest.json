@@ -1,0 +1,25 @@
+{
+  "name": "HootaFPL - منصتك الشاملة لفانتسي البريميرليج",
+  "short_name": "HootaFPL",
+  "description": "تحليل تشكيلتك بالذكاء الاصطناعي، أدوات احترافية للتنبؤ بالنقاط، رادار مقارنة اللاعبين، مصفوفة الكابتن، وجدول مباريات حي.",
+  "start_url": "/HootaFPL/",
+  "scope": "/HootaFPL/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f9fb",
+  "theme_color": "#37003c",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/HootaFPL/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/HootaFPL/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
